@@ -1,0 +1,26 @@
+# EditorConfig ayuda a mantener estilos de codificación consistentes
+# para múltiples desarrolladores trabajando en el mismo proyecto
+# editorconfig.org
+
+root = true
+
+# Todos los archivos
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Archivos JavaScript
+[*.{js,json}]
+indent_style = space
+indent_size = 4
+
+# Archivos HTML/CSS
+[*.{html,css,scss}]
+indent_style = space
+indent_size = 2
+
+# Archivos Markdown
+[*.md]
+trim_trailing_whitespace = false
