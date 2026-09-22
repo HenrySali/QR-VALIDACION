@@ -1315,6 +1315,53 @@
     <script src="js/stations.js"></script>
     <script src="js/qrParser.js"></script>
     <script src="js/main.js"></script>
+
+    <!-- Script de diagnóstico: verifica que todos los módulos estén cargados -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const modules = {
+                    APP_CONFIG: typeof APP_CONFIG,
+                    dbManager: typeof dbManager,
+                    ValidationManager: typeof ValidationManager,
+                    UIManager: typeof UIManager,
+                    UtilityManager: typeof UtilityManager,
+                    validationManager: typeof validationManager,
+                    uiManager: typeof uiManager,
+                    utilityManager: typeof utilityManager,
+                    FileExportManager: typeof FileExportManager,
+                    ImageManager: typeof ImageManager,
+                    EquipmentManager: typeof EquipmentManager,
+                    equipmentManager: typeof equipmentManager,
+                    FormManager: typeof FormManager,
+                    formManager: typeof formManager,
+                    UIController: typeof UIController,
+                    uiController: typeof uiController,
+                    SearchManager: typeof SearchManager,
+                    PaginationUI: typeof PaginationUI,
+                    LazyLoadManager: typeof LazyLoadManager,
+                    StationsManager: typeof StationsManager,
+                    QRParser: typeof QRParser,
+                    QRScanner: typeof QRScanner
+                };
+                
+                const allDefined = Object.entries(modules)
+                    .filter(([key, value]) => value !== 'undefined')
+                    .length;
+                
+                console.log('📦 MODULE STATUS:', modules);
+                console.log(`✓ ${allDefined}/${Object.keys(modules).length} módulos cargados`);
+                
+                if (allDefined < Object.keys(modules).length) {
+                    console.warn('⚠️ Algunos módulos no se cargaron:', 
+                        Object.entries(modules)
+                            .filter(([k, v]) => v === 'undefined')
+                            .map(([k]) => k)
+                    );
+                }
+            }, 100);
+        });
+    </script>
 </body>
 
 </html>
