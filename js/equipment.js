@@ -152,26 +152,66 @@ class EquipmentManager {
 
     /**
      * Registra un nuevo equipo
+     * 
      * @param {Object} equipmentData - Datos del equipo
+     * @param {string} equipmentData.serie - Número de serie (requerido)
+     * @param {string} equipmentData.ubicacion - Ubicación (requerido si no hay patrón)
+     * @param {string} equipmentData.observaciones - Observaciones (opcional)
+     * @param {string} equipmentData.photoId - ID de foto (opcional)
+     * @param {string} equipmentData.photoData - Data URL de foto (opcional)
+     * @param {boolean} equipmentData.usarPatron - Usar ubicación patrón si está activa
+     * 
      * @returns {Promise<Object>}
+     * 
+     * @example
+     * // Registro automático con patrón fijo
+     * await equipmentManager.registerEquipment({
+     *   serie: '001234',
+     *   observaciones: 'Nuevo equipo',
+     *   usarPatron: true  // Usa this.patronUbicacion automáticamente
+     * });
+     * 
+     * @example
+     * // Registro manual de ubicación
+     * await equipmentManager.registerEquipment({
+     *   serie: '001234',
+     *   ubicacion: 'Almacén A',  // Ubicación manual
+     *   observaciones: 'Nuevo equipo'
+     * });
      */
     async registerEquipment(equipmentData) {
         try {
+            // Determinar ubicación a usar
+            let ubicacionFinal = equipmentData.ubicacion;
+
+            // Si se indica usar patrón Y hay patrón activo
+            if (equipmentData.usarPatron && this.patronUbicacion) {
+                ubicacionFinal = this.patronUbicacion;
+            }
+
+            // Validar campos requeridos
+            const requiredFields = ['serie'];
+            if (!ubicacionFinal) {
+                requiredFields.push('ubicacion');
+            }
+
             const validation = ValidationManager.validateRequiredFields(
-                equipmentData,
-                ['serie', 'ubicacion']
+                { ...equipmentData, ubicacion: ubicacionFinal },
+                requiredFields
             );
 
             if (!validation.isValid) {
                 throw new Error(validation.error);
             }
 
+            // Validar serie
             const serieValidation = ValidationManager.validateSerie(equipmentData.serie);
             if (!serieValidation.isValid) {
                 throw new Error(serieValidation.error);
             }
 
-            const ubicacionValidation = ValidationManager.validateUbicacion(equipmentData.ubicacion);
+            // Validar ubicación
+            const ubicacionValidation = ValidationManager.validateUbicacion(ubicacionFinal);
             if (!ubicacionValidation.isValid) {
                 throw new Error(ubicacionValidation.error);
             }
@@ -182,10 +222,11 @@ class EquipmentManager {
                 ubicacion: ubicacionValidation.value,
                 observaciones: equipmentData.observaciones || '',
                 registeredAt: new Date().toISOString(),
-                photoId: equipmentData.photoId || null
+                photoId: equipmentData.photoId || null,
+                registrationMode: equipmentData.usarPatron && this.patronUbicacion ? 'patrón' : 'manual'
             };
 
-            // Guardar en IndexedDB si hay foto
+            // Guardar foto en IndexedDB si existe
             if (equipmentData.photoId && equipmentData.photoData) {
                 await dbManager.dbPut('image', 'images', {
                     id: equipmentData.photoId,
@@ -201,7 +242,7 @@ class EquipmentManager {
 
             return {
                 success: true,
-                message: `Equipo "${equipmentData.serie}" registrado correctamente`,
+                message: `Equipo "${equipmentData.serie}" registrado en ${newEquipment.ubicacion}`,
                 data: newEquipment
             };
         } catch (error) {

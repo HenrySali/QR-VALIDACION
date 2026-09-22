@@ -333,6 +333,23 @@ function setupEventListeners() {
     if (uiController.elements.registerSerieBtn) {
         uiController.elements.registerSerieBtn.addEventListener('click', () => {
             uiController.showRegisterModal();
+            
+            // Si hay patrón activo, mostrar indicación visual
+            if (equipmentManager.patronUbicacion) {
+                UIManager.showFeedback(
+                    `📍 Modo FIJO: Ubicación patrón "${equipmentManager.patronUbicacion}" aplicada automáticamente`,
+                    'warning',
+                    uiController.elements.regFeedback,
+                    3000
+                );
+            } else {
+                UIManager.showFeedback(
+                    '🔓 Modo MANUAL: Selecciona la ubicación técnica',
+                    'warning',
+                    uiController.elements.regFeedback,
+                    3000
+                );
+            }
         });
     }
 
@@ -343,13 +360,31 @@ function setupEventListeners() {
                 ubicacion: uiController.elements.regLocationSelect?.value || '',
                 observaciones: uiController.elements.regObservaciones?.value || '',
                 photoId: uiController.currentPhotoData ? `photo_${UtilityManager.generateId()}` : null,
-                photoData: uiController.currentPhotoData
+                photoData: uiController.currentPhotoData,
+                usarPatron: !!equipmentManager.patronUbicacion  // Usar patrón si está activo
             };
+
+            // Validar
+            if (!formData.serie) {
+                UIManager.showFeedback('❌ Ingresa el número de serie', 'error', uiController.elements.regFeedback);
+                return;
+            }
+
+            // Si NO hay patrón activo, validar que eligió ubicación
+            if (!equipmentManager.patronUbicacion && !formData.ubicacion) {
+                UIManager.showFeedback('❌ Selecciona una ubicación técnica', 'error', uiController.elements.regFeedback);
+                return;
+            }
 
             const result = await equipmentManager.registerEquipment(formData);
 
             if (result.success) {
                 UIManager.showFeedback(result.message, 'success', uiController.elements.regFeedback, 2000);
+                
+                // Mostrar modo utilizado
+                const modoTexto = formData.usarPatron ? '📍 [MODO FIJO]' : '🔓 [MODO MANUAL]';
+                console.log(`${modoTexto} ${result.message}`);
+                
                 uiController.hideRegisterModal();
                 await saveExcelToDB();
             } else {
