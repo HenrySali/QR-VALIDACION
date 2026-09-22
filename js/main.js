@@ -134,6 +134,11 @@ async function loadRemoteInventory() {
     try {
         console.log('📡 Descargando inventario remoto desde:', APP_CONFIG.INVENTARIO_URL);
         
+        if (uiController.elements.loading) {
+            uiController.elements.loading.textContent = '⏳ Descargando inventario...';
+            uiController.elements.loading.style.display = 'block';
+        }
+        
         const response = await fetch(APP_CONFIG.INVENTARIO_URL, { cache: 'no-cache' });
         console.log('Response status:', response.status);
         
@@ -148,6 +153,7 @@ async function loadRemoteInventory() {
         console.log('✓ Excel procesado:', result);
 
         if (result.success) {
+            console.log('📊 Renderizando tabla con', equipmentManager.dataRaw.length, 'registros');
             uiController.renderTable(equipmentManager.dataRaw, equipmentManager.headers);
             populateLocationSelect();
             uiController.setScanControlsEnabled(true);
@@ -159,11 +165,14 @@ async function loadRemoteInventory() {
         }
     } catch (error) {
         console.error('❌ Error descargando inventario:', error);
-        UIManager.showFeedback(
-            `⚠️ No se pudo cargar el inventario: ${error.message}. Carga un archivo manualmente.`, 
-            'warning', 
-            uiController.elements.loading
-        );
+        const errorMsg = `⚠️ No se pudo cargar el inventario automáticamente.\n\nError: ${error.message}\n\nSolución: Carga un archivo Excel manualmente usando el botón "📂 Cargar Archivo Excel"`;
+        
+        if (uiController.elements.loading) {
+            uiController.elements.loading.innerHTML = `<div style="color: #ff6464; padding: 20px; text-align: center; white-space: pre-line;">${errorMsg}</div>`;
+            uiController.elements.loading.style.display = 'block';
+        }
+        
+        UIManager.showFeedback(errorMsg, 'error', uiController.elements.loading);
     }
 }
 
