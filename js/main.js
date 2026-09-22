@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // ============================================
         console.log('🎨 Inicializando interfaz...');
         uiController.initElements({
-            // Carga de archivos
             fileInput: 'fileInput',
             fileLabel: 'fileLabel',
             processBtn: 'processBtn',
@@ -30,38 +29,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearExcelBtn: 'clearExcelBtn',
             exportFileName: 'exportFileName',
             exportNameContainer: 'exportNameContainer',
-
-            // Selector de hojas
             sheetSelector: 'sheetSelector',
             sheetSelectorContainer: 'sheetSelectorContainer',
             sheetInfo: 'sheetInfo',
-
-            // Tabla
             table: 'resultsTable',
             tableContainer: 'tableContainer',
-
-            // Acciones
             startScanBtn: 'startScanBtn',
             verifySerieBtn: 'verifySerieBtn',
             registerSerieBtn: 'registerSerieBtn',
             patronUbicacionContainer: 'patronUbicacionContainer',
             patronUbicacionSelect: 'patronUbicacionSelect',
             clearPatronBtn: 'clearPatronBtn',
-
-            // Modales
             registerModal: 'registerModal',
             verifySerieModal: 'verifySerieModal',
             imageViewerModal: 'imageViewerModal',
-
-            // Formulario de registro
             regSerieInput: 'regSerieInput',
             regLocationSelect: 'regLocationSelect',
             regObservaciones: 'regObservaciones',
             confirmRegBtn: 'confirmRegBtn',
             cancelRegBtn: 'cancelRegBtn',
             regFeedback: 'regFeedback',
-
-            // Cámara
             startCameraBtn: 'startCameraBtn',
             capturePhotoBtn: 'capturePhotoBtn',
             retakePhotoBtn: 'retakePhotoBtn',
@@ -69,49 +56,74 @@ document.addEventListener('DOMContentLoaded', async () => {
             cameraContainer: 'cameraContainer',
             cameraVideo: 'cameraVideo',
             capturedImage: 'capturedImage',
-
-            // Verificación
             verifySerieInput: 'verifySerieInput',
             confirmVerifyBtn: 'confirmVerifyBtn',
             cancelVerifyBtn: 'cancelVerifyBtn',
             verifySuggestions: 'verifySuggestions',
             verifyFeedback: 'verifyFeedback',
-
-            // Visor de imágenes
             fullSizeImage: 'fullSizeImage',
             closeImageViewer: 'closeImageViewer',
-            imageViewerModal: 'imageViewerModal',
-
-            // Exportación de imágenes
             exportImagesBtn: 'exportImagesBtn',
             importImagesInput: 'importImagesInput',
             backupStatus: 'backupStatus',
+            loading: 'loading'
+        });
+        console.log('✓ Interfaz inicializada');
 
-            // Generales
+        // ============================================
+        // 3. CARGAR DATOS INICIALES
+        // ============================================
+        console.log('📥 Cargando datos iniciales...');
+        await loadInitialData();
+        console.log('✓ Datos iniciales cargados');
+
+        // ============================================
+        // 4. CONFIGURAR EVENT LISTENERS
+        // ============================================
+        console.log('🔌 Configurando eventos...');
+        setupEventListeners();
+        console.log('✓ Eventos configurados');
+
+        console.log('✨ ¡Aplicación lista!');
+    } catch (error) {
+        console.error('❌ Error en inicialización:', error);
+        if (uiController.elements.loading) {
+            UIManager.showFeedback(
+                `Error inicializando: ${error.message}`,
+                'error',
+                uiController.elements.loading
+            );
+        }
+    }
+});
+
+/**
+ * Carga los datos iniciales de la aplicación
+ */
+async function loadInitialData() {
     try {
-        // Intentar cargar Excel guardado
+        // Intentar cargar Excel guardado en IndexedDB
         const savedExcel = await dbManager.dbGet('image', APP_CONFIG.DB.EQUIPOS.STORES.EXCEL_DATA, 'currentExcel');
         
-        if (savedExcel) {
-            // Restaurar desde IndexedDB
+        if (savedExcel && savedExcel.dataRaw && savedExcel.dataRaw.length > 0) {
+            console.log('✓ Cargando desde IndexedDB');
             equipmentManager.allSheetsData = savedExcel.allSheetsData || {};
             equipmentManager.allSheetsHeaders = savedExcel.allSheetsHeaders || {};
             equipmentManager.sheetNames = savedExcel.sheetNames || [];
             equipmentManager.currentSheetName = savedExcel.currentSheetName || '';
-            equipmentManager.dataRaw = equipmentManager.allSheetsData[equipmentManager.currentSheetName] || [];
-            equipmentManager.headers = equipmentManager.allSheetsHeaders[equipmentManager.currentSheetName] || [];
+            equipmentManager.dataRaw = savedExcel.dataRaw;
+            equipmentManager.headers = savedExcel.headers || [];
 
-            if (equipmentManager.dataRaw.length > 0) {
-                uiController.renderTable(equipmentManager.dataRaw, equipmentManager.headers);
-                populateLocationSelect();
-                uiController.setScanControlsEnabled(true);
-            }
+            uiController.renderTable(equipmentManager.dataRaw, equipmentManager.headers);
+            populateLocationSelect();
+            uiController.setScanControlsEnabled(true);
         } else {
-            // Intentar descargar desde URL remota
+            // Descargar desde URL remota
             await loadRemoteInventory();
         }
     } catch (error) {
-        console.warn('No se pudieron cargar datos iniciales:', error);
+        console.warn('Error cargando desde IndexedDB:', error);
+        await loadRemoteInventory();
     }
 }
 
@@ -120,14 +132,20 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function loadRemoteInventory() {
     try {
-        console.log('📡 Descargando inventario remoto...');
-        uiController.showProcessing('Cargando inventario...');
-
+        console.log('📡 Descargando inventario remoto desde:', APP_CONFIG.INVENTARIO_URL);
+        
         const response = await fetch(APP_CONFIG.INVENTARIO_URL, { cache: 'no-cache' });
-        if (!response.ok) throw new Error('No se pudo descargar el archivo');
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
         const buffer = await response.arrayBuffer();
+        console.log('✓ Buffer descargado:', buffer.byteLength, 'bytes');
+        
         const result = equipmentManager.processExcelBuffer(buffer, 'Inventario');
+        console.log('✓ Excel procesado:', result);
 
         if (result.success) {
             uiController.renderTable(equipmentManager.dataRaw, equipmentManager.headers);
@@ -140,10 +158,12 @@ async function loadRemoteInventory() {
             throw new Error(result.message);
         }
     } catch (error) {
-        console.warn('Error descargando inventario remoto:', error);
-        UIManager.showFeedback('⚠️ Cargando localmente...', 'warning', uiController.elements.loading);
-    } finally {
-        uiController.hideProcessing();
+        console.error('❌ Error descargando inventario:', error);
+        UIManager.showFeedback(
+            `⚠️ No se pudo cargar el inventario: ${error.message}. Carga un archivo manualmente.`, 
+            'warning', 
+            uiController.elements.loading
+        );
     }
 }
 
@@ -175,6 +195,8 @@ async function saveExcelToDB() {
             allSheetsHeaders: equipmentManager.allSheetsHeaders,
             sheetNames: equipmentManager.sheetNames,
             currentSheetName: equipmentManager.currentSheetName,
+            dataRaw: equipmentManager.dataRaw,
+            headers: equipmentManager.headers,
             fileName: uiController.elements.exportFileName?.value || 'equipos',
             savedAt: new Date().toISOString()
         };
@@ -204,7 +226,6 @@ function setupEventListeners() {
                 }
 
                 uiController.updateFileLabel(file);
-                uiController.showProcessing('Procesando Excel...');
 
                 const buffer = await file.arrayBuffer();
                 const result = equipmentManager.processExcelBuffer(buffer, file.name);
@@ -222,8 +243,6 @@ function setupEventListeners() {
             } catch (error) {
                 UIManager.showFeedback(`Error: ${error.message}`, 'error', uiController.elements.loading);
                 console.error('Error procesando archivo:', error);
-            } finally {
-                uiController.hideProcessing();
             }
         });
     }
@@ -242,29 +261,11 @@ function setupEventListeners() {
         });
     }
 
-    // === EXPORTAR EXCEL ===
-    if (uiController.elements.exportBtn) {
-        uiController.elements.exportBtn.addEventListener('click', () => {
-            const fileName = uiController.elements.exportFileName?.value || 'equipos_exportados';
-            const result = equipmentManager.exportToExcel(fileName);
-            
-            if (result.success) {
-                UIManager.showFeedback(result.message, 'success', uiController.elements.loading, 2000);
-            } else {
-                UIManager.showFeedback(result.error, 'error', uiController.elements.loading);
-            }
-        });
-    }
-
-    // === EXPORTAR CSV ===
-    // (Se puede agregar un botón en el HTML)
-
-    // === REGISTRAR EQUIPO ===
+    // === REGISTRO DE SERIE ===
     if (uiController.elements.registerSerieBtn) {
         uiController.elements.registerSerieBtn.addEventListener('click', () => {
             uiController.showRegisterModal();
             
-            // Si hay patrón activo, mostrar indicación visual
             if (equipmentManager.patronUbicacion) {
                 UIManager.showFeedback(
                     `📍 Modo FIJO: Ubicación patrón "${equipmentManager.patronUbicacion}" aplicada automáticamente`,
@@ -291,16 +292,14 @@ function setupEventListeners() {
                 observaciones: uiController.elements.regObservaciones?.value || '',
                 photoId: uiController.currentPhotoData ? `photo_${UtilityManager.generateId()}` : null,
                 photoData: uiController.currentPhotoData,
-                usarPatron: !!equipmentManager.patronUbicacion  // Usar patrón si está activo
+                usarPatron: !!equipmentManager.patronUbicacion
             };
 
-            // Validar
             if (!formData.serie) {
                 UIManager.showFeedback('❌ Ingresa el número de serie', 'error', uiController.elements.regFeedback);
                 return;
             }
 
-            // Si NO hay patrón activo, validar que eligió ubicación
             if (!equipmentManager.patronUbicacion && !formData.ubicacion) {
                 UIManager.showFeedback('❌ Selecciona una ubicación técnica', 'error', uiController.elements.regFeedback);
                 return;
@@ -310,8 +309,6 @@ function setupEventListeners() {
 
             if (result.success) {
                 UIManager.showFeedback(result.message, 'success', uiController.elements.regFeedback, 2000);
-                
-                // Mostrar modo utilizado
                 const modoTexto = formData.usarPatron ? '📍 [MODO FIJO]' : '🔓 [MODO MANUAL]';
                 console.log(`${modoTexto} ${result.message}`);
                 
@@ -323,59 +320,61 @@ function setupEventListeners() {
         });
     }
 
-    // === CANCELAR REGISTRO ===
     if (uiController.elements.cancelRegBtn) {
         uiController.elements.cancelRegBtn.addEventListener('click', () => {
             uiController.hideRegisterModal();
         });
     }
 
-    // === CÁMARA ===
-    if (uiController.elements.startCameraBtn) {
-        uiController.elements.startCameraBtn.addEventListener('click', () => {
-            uiController.startCamera();
+    // === ESCANEAR QR ===
+    if (uiController.elements.startScanBtn) {
+        uiController.elements.startScanBtn.addEventListener('click', async () => {
+            try {
+                await qrScanner.start();
+            } catch (error) {
+                UIManager.showFeedback(`Error: ${error.message}`, 'error', uiController.elements.loading);
+            }
         });
     }
 
-    if (uiController.elements.capturePhotoBtn) {
-        uiController.elements.capturePhotoBtn.addEventListener('click', () => {
-            uiController.capturePhoto();
+    // === VERIFICAR SERIE ===
+    if (uiController.elements.verifySerieBtn) {
+        uiController.elements.verifySerieBtn.addEventListener('click', () => {
+            uiController.showVerifySerieModal();
         });
     }
 
-    if (uiController.elements.retakePhotoBtn) {
-        uiController.elements.retakePhotoBtn.addEventListener('click', () => {
-            uiController.currentPhotoData = null;
-            uiController.startCamera();
+    if (uiController.elements.confirmVerifyBtn) {
+        uiController.elements.confirmVerifyBtn.addEventListener('click', async () => {
+            const serie = uiController.elements.verifySerieInput?.value || '';
+            if (!serie) {
+                UIManager.showFeedback('Ingresa un número de serie', 'error', uiController.elements.verifyFeedback);
+                return;
+            }
+
+            const result = equipmentManager.searchEquipment({ serie });
+            if (result.length > 0) {
+                UIManager.showFeedback(`✓ Se encontraron ${result.length} coincidencias`, 'success', uiController.elements.verifyFeedback);
+                uiController.renderTable(result, equipmentManager.headers);
+            } else {
+                UIManager.showFeedback('❌ No se encontraron coincidencias', 'error', uiController.elements.verifyFeedback);
+            }
         });
     }
 
-    if (uiController.elements.deletPhotoBtn) {
-        uiController.elements.deletPhotoBtn.addEventListener('click', () => {
-            uiController.deletePhoto();
-        });
-    }
-
-    // === PATRÓN DE UBICACIÓN ===
+    // === UBICACIÓN PATRÓN ===
     if (uiController.elements.patronUbicacionSelect) {
         uiController.elements.patronUbicacionSelect.addEventListener('change', (e) => {
-            const value = e.target.value;
-            equipmentManager.setPatronUbicacion(value);
-            UIManager.showFeedback(
-                value ? `Patrón: ${value}` : 'Patrón desactivado',
-                'warning',
-                uiController.elements.loading,
-                1500
-            );
+            equipmentManager.patronUbicacion = e.target.value || null;
+            console.log('Ubicación patrón:', equipmentManager.patronUbicacion);
         });
     }
 
     if (uiController.elements.clearPatronBtn) {
         uiController.elements.clearPatronBtn.addEventListener('click', () => {
-            if (uiController.elements.patronUbicacionSelect) {
-                uiController.elements.patronUbicacionSelect.value = '';
-            }
-            equipmentManager.setPatronUbicacion(null);
+            equipmentManager.patronUbicacion = null;
+            uiController.elements.patronUbicacionSelect.value = '';
+            UIManager.showFeedback('✓ Ubicación patrón eliminada', 'success', uiController.elements.loading, 1500);
         });
     }
 
