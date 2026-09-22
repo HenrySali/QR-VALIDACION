@@ -8,7 +8,11 @@
 // Esperar a que todos los módulos estén listos
 function waitForModules() {
     return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = 50; // 2.5 segundos máximo
+        
         const checkModules = () => {
+            attempts++;
             if (
                 typeof dbManager !== 'undefined' &&
                 typeof uiController !== 'undefined' &&
@@ -19,8 +23,18 @@ function waitForModules() {
                 typeof utilityManager !== 'undefined' &&
                 typeof APP_CONFIG !== 'undefined'
             ) {
-                console.log('✓ Todos los módulos están listos');
+                console.log(`✓ Todos los módulos están listos (intento ${attempts})`);
                 resolve();
+            } else if (attempts >= maxAttempts) {
+                console.warn('⚠️ Timeout esperando módulos, continuando de todas formas...');
+                console.warn('Estado de módulos:', {
+                    dbManager: typeof dbManager,
+                    uiController: typeof uiController,
+                    formManager: typeof formManager,
+                    equipmentManager: typeof equipmentManager,
+                    APP_CONFIG: typeof APP_CONFIG
+                });
+                resolve(); // Continuar de todas formas
             } else {
                 setTimeout(checkModules, 50);
             }
