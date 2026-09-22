@@ -416,3 +416,12 @@ class UtilityManager {
         );
     }
 }
+
+
+
+// ============================================
+// Crear instancias globales de los managers
+// ============================================
+const validationManager = new ValidationManager();
+const uiManager = new UIManager();
+const utilityManager = new UtilityManager();

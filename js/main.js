@@ -14,6 +14,9 @@ function waitForModules() {
                 typeof uiController !== 'undefined' &&
                 typeof formManager !== 'undefined' &&
                 typeof equipmentManager !== 'undefined' &&
+                typeof validationManager !== 'undefined' &&
+                typeof uiManager !== 'undefined' &&
+                typeof utilityManager !== 'undefined' &&
                 typeof APP_CONFIG !== 'undefined'
             ) {
                 console.log('✓ Todos los módulos están listos');
