@@ -240,13 +240,19 @@ async function loadInitialData() {
 async function loadRemoteInventory() {
     try {
         console.log('📡 Descargando inventario remoto...');
+        console.log('URL:', APP_CONFIG.INVENTARIO_URL);
         uiController.showProcessing('Cargando inventario...');
 
         const response = await fetch(APP_CONFIG.INVENTARIO_URL, { cache: 'no-cache' });
-        if (!response.ok) throw new Error('No se pudo descargar el archivo');
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
         const buffer = await response.arrayBuffer();
+        console.log('✓ Buffer descargado:', buffer.byteLength, 'bytes');
+        
         const result = equipmentManager.processExcelBuffer(buffer, 'Inventario');
+        console.log('✓ Resultado procesamiento:', result);
 
         if (result.success) {
             uiController.renderTable(equipmentManager.dataRaw, equipmentManager.headers);
@@ -259,7 +265,7 @@ async function loadRemoteInventory() {
             throw new Error(result.message);
         }
     } catch (error) {
-        console.warn('Error descargando inventario remoto:', error);
+        console.error('❌ Error descargando inventario remoto:', error);
         UIManager.showFeedback('⚠️ Cargando localmente...', 'warning', uiController.elements.loading);
     } finally {
         uiController.hideProcessing();
