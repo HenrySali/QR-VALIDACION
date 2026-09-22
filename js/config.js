@@ -11,7 +11,7 @@ const APP_CONFIG = {
     APP_VERSION: '2.0.0',
     
     // === URLs ===
-    INVENTARIO_URL: 'https://electrocenter3cma-lang.github.io/validacion/Inventario2.xlsx',
+    INVENTARIO_URL: 'https://henrysali.github.io/QR-VALIDACION/Inventario2.xlsx',
     
     // === CONFIGURACIÓN DE INDEXEDDB ===
     DB: {
