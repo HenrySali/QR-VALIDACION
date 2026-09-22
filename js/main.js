@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('✓ Datos leídos:', rows.length, 'filas');
         
         // Mostrar en tabla
-        const table = document.getElementById('resultsTable');
+        const table = document.getElementById('tableMain');
         if (!table) throw new Error('No hay tabla en el HTML');
         
         const headers = Object.keys(rows[0]);
