@@ -5,10 +5,34 @@
  * de event listeners para la aplicación.
  */
 
+// Esperar a que todos los módulos estén listos
+function waitForModules() {
+    return new Promise((resolve) => {
+        const checkModules = () => {
+            if (
+                typeof dbManager !== 'undefined' &&
+                typeof uiController !== 'undefined' &&
+                typeof formManager !== 'undefined' &&
+                typeof equipmentManager !== 'undefined' &&
+                typeof APP_CONFIG !== 'undefined'
+            ) {
+                console.log('✓ Todos los módulos están listos');
+                resolve();
+            } else {
+                setTimeout(checkModules, 50);
+            }
+        };
+        checkModules();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Inicializando QR-VALIDACION v2.0...');
 
     try {
+        // Esperar a que todos los módulos estén cargados
+        await waitForModules();
+
         // ============================================
         // 1. INICIALIZAR BASES DE DATOS
         // ============================================
@@ -97,37 +121,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         // ============================================
         console.log('✔️ Definiendo reglas de validación...');
         
-        formManager.defineRules('registerForm', {
-            serie: {
-                required: true,
-                requiredMessage: 'El número de serie es requerido',
-                minLength: 3,
-                minLengthMessage: 'Mínimo 3 caracteres',
-                maxLength: 50,
-                pattern: APP_CONFIG.VALIDATION.SERIE_REGEX,
-                patternMessage: 'Solo letras, números y guiones permitidos'
-            },
-            ubicacion: {
-                required: true,
-                requiredMessage: 'La ubicación es requerida',
-                minLength: 2,
-                maxLength: 100
-            },
-            observaciones: {
-                required: false,
-                maxLength: 500
-            }
-        });
+        try {
+            const serieRegex = (APP_CONFIG && APP_CONFIG.VALIDATION && APP_CONFIG.VALIDATION.SERIE_REGEX) 
+                ? APP_CONFIG.VALIDATION.SERIE_REGEX 
+                : /^[A-Z0-9\-]{3,}$/;
 
-        formManager.defineRules('verifyForm', {
-            verifySerie: {
-                required: true,
-                requiredMessage: 'Ingresa un número de serie',
-                minLength: 3
-            }
-        });
+            formManager.defineRules('registerForm', {
+                serie: {
+                    required: true,
+                    requiredMessage: 'El número de serie es requerido',
+                    minLength: 3,
+                    minLengthMessage: 'Mínimo 3 caracteres',
+                    maxLength: 50,
+                    pattern: serieRegex,
+                    patternMessage: 'Solo letras, números y guiones permitidos'
+                },
+                ubicacion: {
+                    required: true,
+                    requiredMessage: 'La ubicación es requerida',
+                    minLength: 2,
+                    maxLength: 100
+                },
+                observaciones: {
+                    required: false,
+                    maxLength: 500
+                }
+            });
 
-        console.log('✓ Reglas definidas');
+            formManager.defineRules('verifyForm', {
+                verifySerie: {
+                    required: true,
+                    requiredMessage: 'Ingresa un número de serie',
+                    minLength: 3
+                }
+            });
+
+            console.log('✓ Reglas definidas');
+        } catch (error) {
+            console.error('⚠️ Error definiendo reglas (continuando):', error);
+        }
 
         // ============================================
         // 4. CARGAR DATOS INICIALES
